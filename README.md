@@ -13,6 +13,10 @@
 
 [کد ربات](bot.py) · [نوت‌بوک آیفون](notebooks/rr-first-bot.ipynb) · [تست‌ها](tests/test_bot.py) · [کانال RR Digital Hub](https://www.youtube.com/@rrdigitalhub)
 
+## قالب مینی‌اپ فروشگاه
+
+بعد از اولین منو، [قدم ۶ درس دوم](lessons/02-first-menu.md#step-6) را دنبال کن. [سورس و راه‌اندازی فروشگاه](digital-shop/README.md) در پوشهٔ `digital-shop` است.
+
 ## نمونهٔ آفلاین با Python 3.10 یا جدیدتر
 
 بعد از باز کردن پوشهٔ پروژه در ترمینال این دستور را اجرا کن. نمونهٔ درخواست ارسال منو چاپ می‌شود و می‌توانی ساختار دکمه را ببینی.
