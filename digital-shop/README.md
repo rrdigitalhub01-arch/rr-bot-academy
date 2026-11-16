@@ -4,6 +4,8 @@
 
 ## راه‌اندازی روی حساب Cloudflare
 
+پیش از زدن دکمهٔ نصب، وارد حساب شخصی GitHub خودت شو. در فرم Cloudflare، **New GitHub connection** را بزن و همان حساب را وصل کن. [قدم ۹-الف آموزش ساخت حساب رایگان GitHub](../lessons/02-first-menu.md#step-9-github)
+
 [راه‌اندازی فروشگاه خودم در Cloudflare](https://deploy.workers.cloudflare.com/?url=https%3A%2F%2Fgithub.com%2Frrdigitalhub01-arch%2Frr-bot-academy%2Ftree%2Fmain%2Fdigital-shop)
 
 برای وارد کردن مخزن از داشبورد، این مراحل را دنبال کن.
