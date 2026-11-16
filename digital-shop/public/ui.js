@@ -140,7 +140,9 @@ function deliveryControls(entry) {
 }
 
 export function orderCard(order, training, action) {
-  const current = orderStatuses[order.status] ?? order.status;
+  const current = order.status === "pending_payment" && order.payable === false
+    ? "در حال بررسی پرداخت"
+    : orderStatuses[order.status] ?? order.status;
   const finished = order.status === "delivered";
   const paid = finished || order.status === "paid";
   const settled = paid || order.status === "placed";

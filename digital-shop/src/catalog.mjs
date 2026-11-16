@@ -74,7 +74,7 @@ export function cleanCatalog(input) {
     text: color(src.text), accent: color(src.accent), radius: integer(src.radius, 4, 36),
     font,
     labels: Object.fromEntries(Object.entries(defaultCatalog.settings.labels).map(([key, fallback]) => [key, string(labels[key] ?? fallback, 35, true)])),
-    supportUrl: publicUrl(src.supportUrl)
+    supportUrl: publicUrl(src.supportUrl), termsUrl: publicUrl(src.termsUrl)
   };
   const categories = unique(collection(input.categories, 50).map(item => {
     check(item && typeof item === "object");
@@ -101,7 +101,7 @@ export function cleanCatalog(input) {
     return {
       id: identifier(item.id), categoryId: item.categoryId, name: string(item.name, 90, true),
       description: string(item.description, 1500), image: publicUrl(item.image, { media: true }),
-      active: item.active === true, delivery: item.delivery, link, variants, fields
+      active: item.active === true, liveEnabled: item.liveEnabled === true, delivery: item.delivery, link, variants, fields
     };
   }));
   return { settings, categories, products };

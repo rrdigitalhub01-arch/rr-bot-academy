@@ -20,9 +20,11 @@ function signedProfile(id, authDate = Math.floor(Date.now() / 1000)) {
   return 'tma ' + params;
 }
 
-function fixture() {
+function fixture(mode = 'training') {
   const sqlite = new DatabaseSync(':memory:');
-  sqlite.exec(readFileSync(new URL('../migrations/0001_shop.sql', import.meta.url), 'utf8'));
+  for (const migration of ['0001_shop.sql', '0002_stars.sql']) {
+    sqlite.exec(readFileSync(new URL('../migrations/' + migration, import.meta.url), 'utf8'));
+  }
 
   function bind(sql, args) {
     const stmt = sqlite.prepare(sql);
@@ -34,7 +36,7 @@ function fixture() {
   }
 
   const env = {
-    BOT_TOKEN: token, SETUP_CODE: code,
+    BOT_TOKEN: token, SETUP_CODE: code, SHOP_MODE: mode,
     DB: {
       prepare(sql) { return { ...bind(sql, []), bind: (...args) => bind(sql, args) }; },
       async batch(statements) {
@@ -156,4 +158,125 @@ test('rejects stale Telegram identity, unchecked fields, and non-purchasable lis
   const url = '/api/admin/catalog';
   catalog.settings.logo = 'javascript:alert(1)';
   assert.equal((await request(url, { id: 100, method: 'PUT', data: catalog })).status, 400);
+});
+
+const termsUrl = 'https://owner.example/terms';
+const supportUrl = 'https://t.me/shop_contact';
+const liveCheckout = (key) => ({ ...checkout(key), acceptedTermsUrl: termsUrl });
+
+async function prepareLive(request) {
+  await request('/api/setup/claim', { method: 'POST', data: { code }, id: 100 });
+  const catalog = structuredClone(defaultCatalog);
+  catalog.settings.termsUrl = termsUrl;
+  catalog.settings.supportUrl = supportUrl;
+  catalog.products.find(product => product.id === 'vpn-subscription').liveEnabled = true;
+  assert.equal((await request('/api/admin/catalog', { method: 'PUT', id: 100, data: catalog })).status, 200);
+  assert.equal((await request('/api/admin/codes', { method: 'POST', id: 100, data: {
+    productId: 'vpn-subscription', variantId: 'one-month', values: ['SELLER-STOCK-01']
+  } })).json.added, 1);
+}
+
+async function captureTelegram(run) {
+  const fetchOriginal = globalThis.fetch;
+  const calls = [];
+  globalThis.fetch = async (url, options) => {
+    const method = new URL(url).pathname.split('/').at(-1);
+    calls.push({ method, data: JSON.parse(options.body) });
+    return Response.json({ ok: true, result: method === 'createInvoiceLink' ? 'https://t.me/$invoice' : true });
+  };
+  try { return await run(calls); } finally { globalThis.fetch = fetchOriginal; }
+}
+
+async function telegramUpdate(request, data) {
+  return request('/telegram/webhook', {
+    method: 'POST', data, headers: { 'X-Telegram-Bot-Api-Secret-Token': await webhookSecret(token) }
+  });
+}
+
+test('live Stars invoice enforces terms, reserves stock, verifies the payer, and refunds at most once', async () => {
+  const request = fixture('live');
+  assert.deepEqual((await request('/api/health')).json, { ok: true, mode: 'live' });
+  assert.equal((await request('/api/catalog')).json.products.length, 1);
+  await prepareLive(request);
+  assert.deepEqual((await request('/api/catalog')).json.products.map(product => product.id), ['stars-guide', 'vpn-subscription']);
+
+  await captureTelegram(async calls => {
+    const post = (path, data, id = 101) => request(path, { method: 'POST', data, id });
+    assert.equal((await post('/api/admin/telegram/connect')).status, 403);
+    assert.equal((await post('/api/admin/telegram/connect', null, 100)).status, 200);
+    assert.deepEqual(calls.find(call => call.method === 'setWebhook').data.allowed_updates, ['message', 'pre_checkout_query']);
+    assert.equal((await post('/api/orders', checkout('invalid-terms'))).json.code, 'terms_required');
+    const result = await post('/api/orders', liveCheckout('first-order'));
+    const { order, invoiceUrl } = result.json;
+    const route = '/api/orders/' + order.id;
+    const adminRoute = '/api/admin/orders/' + order.id;
+    assert.equal(result.status, 201);
+    assert.equal(order.status, 'pending_payment');
+    assert.equal(order.total, 120);
+    assert.equal(order.payable, true);
+    assert.equal(invoiceUrl, 'https://t.me/$invoice');
+    const invoice = calls.find(call => call.method === 'createInvoiceLink').data;
+    assert.equal(invoice.payload, order.id);
+    assert.equal(invoice.currency, 'XTR');
+    assert.equal(invoice.provider_token, '');
+    assert.equal(invoice.prices.length, 1);
+    assert.equal(invoice.prices[0].amount, 120);
+    assert.equal((await post('/api/orders', liveCheckout('first-order'))).json.order.id, order.id);
+    assert.equal(calls.filter(call => call.method === 'createInvoiceLink').length, 1);
+
+    assert.equal((await post('/api/orders', liveCheckout('other-order'), 102)).json.code, 'stock_changed');
+    assert.equal((await post(route + '/invoice', null, 102)).status, 404);
+    assert.equal((await post(adminRoute + '/delivery', { delivery: [] }, 100)).status, 409);
+
+    const preCheckout = { id: 'q-ok', from: { id: 101 }, invoice_payload: order.id, total_amount: 120, currency: 'XTR' };
+    for (const query of [{ ...preCheckout, from: { id: 102 } }, { ...preCheckout, total_amount: 121 },
+      { ...preCheckout, currency: 'USD' }, preCheckout, preCheckout, { ...preCheckout, id: 'second' }]) {
+      assert.equal((await telegramUpdate(request, { pre_checkout_query: query })).status, 200);
+    }
+    assert.deepEqual(calls.filter(call => call.method === 'answerPreCheckoutQuery').map(call => call.data.ok),
+      [false, false, false, true, true, false]);
+    assert.equal((await post(route + '/cancel')).status, 409);
+
+    const pay = { currency: 'XTR', invoice_payload: order.id, total_amount: 120, telegram_payment_charge_id: 'charge-one' };
+    const message = { from: { id: 101 }, chat: { id: 101, type: 'private' }, successful_payment: pay };
+    await telegramUpdate(request, { message: { ...message, successful_payment: { ...pay, total_amount: 119 } } });
+    assert.equal((await request('/api/orders', { id: 101 })).json.orders[0].status, 'pending_payment');
+    await telegramUpdate(request, { message });
+    await telegramUpdate(request, { message });
+    assert.equal((await request('/api/orders', { id: 101 })).json.orders[0].status, 'paid');
+    assert.equal((await request('/api/orders', { id: 102 })).json.orders.length, 0);
+
+    const delivered = await post(adminRoute + '/delivery', { delivery: [] }, 100);
+    assert.equal(delivered.json.order.delivery[0].value, 'SELLER-STOCK-01');
+    assert.equal(delivered.json.order.status, 'delivered');
+    assert.equal((await post(adminRoute + '/refund')).status, 403);
+    assert.equal((await post(adminRoute + '/refund', null, 100)).json.order.status, 'refunded');
+    assert.equal((await post(adminRoute + '/refund', null, 100)).json.order.status, 'refunded');
+    assert.deepEqual(calls.filter(call => call.method === 'refundStarPayment').map(call => call.data), [
+      { user_id: 101, telegram_payment_charge_id: 'charge-one' }
+    ]);
+    const history = (await request('/api/orders', { id: 101 })).json.orders[0];
+    assert.equal(history.status, 'refunded');
+    assert.deepEqual(history.delivery, []);
+    assert.equal((await post('/api/orders', liveCheckout('yet-another'), 102)).json.code, 'stock_changed');
+    await telegramUpdate(request, { message: { chat: { id: 101, type: 'private' }, text: '/paysupport' } });
+    assert.match(calls.at(-1).data.text, /shop_contact/);
+  });
+});
+
+test('a cancelled invoice releases its reservation and cannot be paid later', async () => {
+  const request = fixture('live');
+  await prepareLive(request);
+  await captureTelegram(async calls => {
+    const input = { method: 'POST', id: 101, data: liveCheckout('first') };
+    const first = (await request('/api/orders', input)).json.order;
+    assert.equal((await request('/api/orders/' + first.id + '/cancel', { method: 'POST', id: 101 })).json.order.status, 'cancelled');
+    await telegramUpdate(request, { pre_checkout_query: {
+      id: 'late-cancelled', from: { id: 101 }, invoice_payload: first.id, total_amount: 120, currency: 'XTR'
+    } });
+    assert.equal(calls.at(-1).data.ok, false);
+    const second = await request('/api/orders', { ...input, id: 102, data: liveCheckout('reordered') });
+    assert.equal(second.status, 201);
+    assert.notEqual(second.json.order.id, first.id);
+  });
 });

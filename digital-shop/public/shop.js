@@ -13,7 +13,7 @@ const icons = {shop: "▦", cart: "▱", orders: "☷"};
 const state = {
   page: location.pathname.startsWith("/setup") ? "setup" : "shop",
   owner: false, hasOwner: true, training: true, category: "", query: "", shopScroll: 0,
-  catalog: structuredClone(defaults), cart: [], checkoutKey: id(), checkoutBusy: false, orders: [],
+  catalog: structuredClone(defaults), cart: [], checkoutKey: id(), checkoutBusy: false, acceptedTermsUrl: "", orders: [],
 };
 
 let toastTimer;
@@ -38,6 +38,7 @@ function rememberCart() {
 function updateCart(updated) {
   state.cart = updated;
   state.checkoutKey = id();
+  state.acceptedTermsUrl = "";
   rememberCart();
   renderHeader();
   renderNav();
@@ -346,13 +347,40 @@ function showCart() {
       (!variant || item.quantity > maximum) && node("small", {class: "bad"}, "تعداد محصول یا موجودی تغییر کرده است."),
     ));
   }
-  const checkoutText = settings.labels.checkout + (state.training ? " آزمایشی" : "");
+  const termsUrl = safeUrl(settings.termsUrl);
+  const checkoutText = state.training ? settings.labels.checkout + " آزمایشی" : "پرداخت با استارز";
+  const submit = button(state.checkoutBusy ? "در حال ثبت…" : checkoutText, checkout, "primary block", {
+    disabled: unavailable || state.checkoutBusy || (!state.training && (!termsUrl || state.acceptedTermsUrl !== termsUrl)),
+  });
+  const consent = !state.training && termsUrl && node("div", {class: "stack compact"},
+    href("شرایط خرید", termsUrl, "ghost"),
+    node("label", {class: "row"},
+      input({type: "checkbox", checked: state.acceptedTermsUrl === termsUrl, disabled: state.checkoutBusy,
+        onchange: event => {
+          state.acceptedTermsUrl = event.target.checked ? termsUrl : "";
+          submit.disabled = unavailable || state.checkoutBusy || !state.acceptedTermsUrl;
+        }}),
+      "شرایط خرید را خواندم و می‌پذیرم."),
+  );
   content.append(node("div", {class: "panel stack"},
     node("div", {class: "row between"}, node("strong", {}, "جمع سفارش"), node("strong", {class: "price"}, price(total))),
     state.training && node("p", {class: "muted"}, "این سفارش آزمایشی است و مبلغی پرداخت نمی‌شود."),
-    button(state.checkoutBusy ? "در حال ثبت…" : checkoutText, checkout, "primary block", {disabled: unavailable || state.checkoutBusy}),
+    consent, submit,
   ));
   screen.replaceChildren(content);
+}
+
+function openInvoice(url) {
+  go("orders");
+  if (!telegram?.openInvoice) {
+    notify("تلگرام را به‌روز کن و از سفارش‌ها پرداخت را ادامه بده.");
+    return;
+  }
+  telegram.openInvoice(url, status => {
+    if (status === "paid" || status === "pending") notify("وضعیت پرداخت از تلگرام در حال بررسی است.");
+    if (status === "cancelled" || status === "failed") notify("می‌توانی پرداخت را از سفارش‌ها ادامه بدهی.");
+    if (state.page === "orders") showOrders();
+  });
 }
 
 async function checkout() {
@@ -361,16 +389,13 @@ async function checkout() {
   showCart();
   try {
     const {invoiceUrl} = await api("/api/orders", {
-      method: "POST", body: {idempotencyKey: state.checkoutKey, items: state.cart},
+      method: "POST",
+      body: {idempotencyKey: state.checkoutKey, items: state.cart, acceptedTermsUrl: state.acceptedTermsUrl},
     });
     updateCart([]);
-    if (invoiceUrl && !state.training && telegram?.openInvoice) {
-      telegram.openInvoice(invoiceUrl, status => {
-        if (status === "cancelled") notify("پرداخت لغو شد.");
-        go("orders");
-      });
-    } else {
-      notify("سفارش ثبت شد.");
+    if (invoiceUrl) openInvoice(invoiceUrl);
+    else {
+      notify(state.training ? "سفارش ثبت شد." : "وضعیت سفارش را بررسی کن.");
       go("orders");
     }
     await updateCatalog();
@@ -380,6 +405,30 @@ async function checkout() {
     state.checkoutBusy = false;
     if (state.page === "cart") showCart();
   }
+}
+
+function invoiceActions(order) {
+  if (!order.payable) return null;
+  const change = async (action) => {
+    pay.disabled = true;
+    cancel.disabled = true;
+    try {
+      const result = await api("/api/orders/" + encodeURIComponent(order.id) + "/" + action, {method: "POST"});
+      if (result.invoiceUrl) openInvoice(result.invoiceUrl);
+      else {
+        await updateCatalog();
+        if (state.page === "orders") await showOrders();
+      }
+    } catch (error) {
+      notify(error.message);
+    } finally {
+      pay.disabled = false;
+      cancel.disabled = false;
+    }
+  };
+  const pay = button("ادامهٔ پرداخت", () => change("invoice"), "primary");
+  const cancel = button("لغو فاکتور", () => change("cancel"), "ghost");
+  return node("div", {class: "row wrap"}, pay, cancel);
 }
 
 async function showOrders() {
@@ -393,7 +442,7 @@ async function showOrders() {
     if (!container.isConnected) return;
     container.lastElementChild.remove();
     container.append(button("به‌روزرسانی سفارش‌ها", () => showOrders(), "ghost"));
-    if (orders.length) container.append(...orders.map(order => orderCard(order, state.training)));
+    if (orders.length) container.append(...orders.map(order => orderCard(order, order.mode ? order.mode === "training" : state.training, invoiceActions(order))));
     else container.append(
       empty("هنوز سفارشی ثبت نشده", "سفارش‌های این فروشگاه اینجا دیده می‌شوند.", button("مشاهدهٔ محصولات", () => go("shop"), "primary")),
     );

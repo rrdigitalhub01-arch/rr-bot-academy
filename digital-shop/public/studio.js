@@ -130,6 +130,8 @@ export async function showStudio({screen, api, demo, training, notify, updateCat
           textarea("پیام خوش‌آمد", settings.welcome, set("welcome"), "wide", 500),
           formInput("آدرس HTTPS لوگو", settings.logo, set("logo"), {dir: "ltr", inputmode: "url"}, "wide"),
           formInput("لینک HTTPS پشتیبانی", settings.supportUrl, set("supportUrl"), {dir: "ltr", inputmode: "url"}, "wide"),
+          formInput("لینک HTTPS شرایط خرید", settings.termsUrl, set("termsUrl"), {dir: "ltr", inputmode: "url"}, "wide"),
+          !demo && connectPayments(),
         )),
         section("بنر", node("div", {class: "form-grid"},
           formInput("عنوان بنر", settings.bannerTitle, set("bannerTitle"), {maxlength: 80}, "wide"),
@@ -277,6 +279,7 @@ export async function showStudio({screen, api, demo, training, notify, updateCat
             textarea("توضیح محصول", product.description, set("description"), "wide", 1500),
             formInput("آدرس عکس محصول", product.image, set("image"), {dir: "ltr", inputmode: "url"}, "wide"),
             check("نمایش در فروشگاه", product.active, set("active")),
+            product.delivery !== "link" && check("فعال برای پرداخت واقعی", product.liveEnabled, set("liveEnabled")),
           ),
           product.delivery === "link" ?
             formInput("لینک HTTPS رسمی", product.link, set("link"), {dir: "ltr", inputmode: "url"}) :
@@ -335,13 +338,13 @@ export async function showStudio({screen, api, demo, training, notify, updateCat
       );
     }
 
-    function buildDelivery(order) {
-      const label = input({value: training ? "کد آزمایشی" : "اطلاعات تحویل", required: true, maxlength: 120});
+    function buildDelivery(order, training) {
+      const label = input({value: training ? "کد آزمایشی" : "اطلاعات تحویل", required: true, maxlength: 100});
       const value = node("textarea", {rows: 2, maxlength: 600, dir: "auto", autocomplete: "off", required: true});
       value.value = training ? "RR-DEMO-" + order.id.slice(-6) : "";
       const submit = node("button", {type: "submit", class: "button primary"}, "تحویل " + (training ? "آزمایشی" : "سفارش"));
       const useCodes = order.items.every(item =>
-        draft.products.find(product => product.id === item.productId)?.delivery === "code");
+        (item.method ?? draft.products.find(product => product.id === item.productId)?.delivery) === "code");
       const auto = useCodes ? button("تحویل خودکار از موجودی کد", () => send([]), "subtle") : null;
       async function send(delivery) {
         submit.disabled = true;
@@ -367,14 +370,53 @@ export async function showStudio({screen, api, demo, training, notify, updateCat
       );
     }
 
+    function connectPayments() {
+      const connect = button("به‌روزرسانی اتصال تلگرام", async () => {
+        connect.disabled = true;
+        try {
+          await api("/api/admin/telegram/connect", {method: "POST"});
+          notify("اتصال تلگرام به‌روز شد.");
+        } catch (error) {
+          notify(error.message);
+        } finally {
+          connect.disabled = false;
+        }
+      }, "ghost");
+      return connect;
+    }
+
+    function refundButton(order) {
+      const action = button(order.refundPending ? "بررسی دوبارهٔ بازپرداخت" : "بازپرداخت کامل استارز", async () => {
+        if (!window.confirm("کل مبلغ این سفارش به خریدار برگردد؟")) return;
+        action.disabled = true;
+        try {
+          await api("/api/admin/orders/" + encodeURIComponent(order.id) + "/refund", {method: "POST"});
+          notify("بازپرداخت ثبت شد.");
+          if (activeTab === "orders") drawBody();
+        } catch (error) {
+          notify(error.message);
+        } finally {
+          action.disabled = false;
+        }
+      }, "ghost danger");
+      return action;
+    }
+
     async function drawOrders(ordersContainer) {
       try {
         const {orders} = await api("/api/admin/orders");
         if (!ordersContainer.isConnected) return;
         ordersContainer.replaceChildren(button("به‌روزرسانی سفارش‌ها", () => drawBody(), "ghost"));
         if (orders.length) {
-          ordersContainer.append(...orders.map(order => orderCard(order, training,
-            ["placed", "paid"].includes(order.status) ? buildDelivery(order) : null)));
+          ordersContainer.append(...orders.map(order => {
+            const practice = order.mode ? order.mode === "training" : training;
+            const ready = practice ? order.status === "placed" : order.status === "paid" && !order.refundPending;
+            const refund = !practice && ["paid", "delivered"].includes(order.status);
+            return orderCard(order, practice, node("div", {class: "stack compact"},
+              ready && buildDelivery(order, practice),
+              refund && refundButton(order),
+            ));
+          }));
         } else {
           ordersContainer.append(empty("سفارشی ثبت نشده", "یک سفارش از فروشگاه ثبت کنید تا اینجا نمایش داده شود."));
         }

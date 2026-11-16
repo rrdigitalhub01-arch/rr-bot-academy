@@ -19,6 +19,7 @@ export const defaultCatalog = {
       enter: "ورود به فروشگاه", checkout: "ثبت سفارش", support: "پشتیبانی",
     },
     supportUrl: "",
+    termsUrl: "",
   },
   categories: [
     {id: "gift", name: "گیفت"},

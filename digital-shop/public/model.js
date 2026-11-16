@@ -78,6 +78,7 @@ export function cleanCatalog(source) {
       key, trim(input.labels?.[key], 32) || value,
     ])),
     supportUrl: safeUrl(input.supportUrl),
+    termsUrl: safeUrl(input.termsUrl),
   };
 
   const categories = validateItems(source.categories, 50).map(category => ({
@@ -114,6 +115,7 @@ export function cleanCatalog(source) {
       description: trim(product.description, 1500),
       image: safeUrl(product.image, true),
       active: product.active === true,
+      liveEnabled: product.liveEnabled === true,
       delivery,
       link: safeUrl(product.link),
       variants: delivery === "link" ? [] : variants,
