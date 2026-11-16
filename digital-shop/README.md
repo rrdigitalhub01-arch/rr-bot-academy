@@ -112,6 +112,16 @@
 3. اسم پروژه‌ات را پیدا کن. اگر نام پیش‌فرض را عوض نکردی، دنبال `rr-academy-shop` بگرد.
    - **پروژه را می‌بینی** — بازش کن و وضعیت آخرین Deploy را بررسی کن. اگر موفق شده، آدرس Worker را باز کن و به [قدم ۵](#step-5) برو. اگر هنوز در حال اجراست، از همان صفحه منتظر نتیجه بمان.
    - **پروژه را در همان حساب نمی‌بینی** — از لینک نصب زیر، فرم قالب را در همان مرورگر دوباره باز کن. در **Git account** حساب خودت را انتخاب کن و از نام پروژه و دیتابیس تا **Deploy** را طبق قدم ۴ انجام بده. [باز کردن دوبارهٔ فرم نصب قالب](https://deploy.workers.cloudflare.com/?url=https%3A%2F%2Fgithub.com%2Frrdigitalhub01-arch%2Frr-bot-academy%2Ftree%2Fmain%2Fdigital-shop)
+   - **خود لینک نصب دوباره به داشبورد برمی‌گردد** — از [Create application و Connect GitHub](#cloudflare-connect-github) ادامه بده.
+
+<a name="cloudflare-connect-github"></a>
+
+### اگر لینک نصب دوباره داشبورد را باز کرد
+
+1. در **Workers & Pages**، بعد از دیدن **No projects found**، روی **Create application** بزن.
+2. در صفحهٔ **Make something new**، گزینهٔ اول یعنی **Connect GitHub** را بزن تا حساب و مخزن را انتخاب کنی.
+3. اگر نسخه‌ای از قالب در حساب GitHub خودت ساخته شده، همان مخزن را برای Deploy انتخاب کن. اگر مخزن هنوز ساخته نشده و روش دستی را ادامه می‌دهی، اول یک [Fork از مخزن دوره](https://github.com/rrdigitalhub01-arch/rr-bot-academy) در حساب خودت بساز تا Cloudflare بتواند آن را ببیند.
+4. برای کپیِ کل مخزن دوره، **Root directory** را `digital-shop` بگذار. اگر فایل `wrangler.jsonc` در صفحهٔ اول مخزن خودت است، ریشهٔ همان مخزن را نگه دار. **Deploy command** باید `npm run deploy` باشد. پروژه به دیتابیس D1 با Binding برابر `DB` نیاز دارد. [راهنمای تنظیم ساخت Cloudflare Workers](https://developers.cloudflare.com/workers/ci-cd/builds/configuration/)
 
 <a name="step-5"></a>
 
@@ -183,4 +193,4 @@ npm run dev
 
 در مرورگر عادی، پیش‌نمایش تمرینی کالاها و روند سفارش را می‌بینی. تست خودکار مسیر پرداخت را با پاسخ شبیه‌سازی‌شدهٔ تلگرام بررسی می‌کند. در نصب عادی، پاسخ سالم `/api/health` شامل `ok: true` و `mode: live` است. تنظیمات عمومی کاتالوگ از پنل در قالب JSON قابل ذخیره‌اند. توکن‌ها، سفارش‌ها و کدهای تحویل در فایل کاتالوگ قرار نمی‌گیرند.
 
-اگر کل مخزن دوره را از داشبورد به‌صورت دستی Import می‌کنی، **Root directory** را `digital-shop` و **Deploy command** را `npm run deploy` تنظیم کن. پروژه به یک D1 با Binding برابر `DB` نیاز دارد. [راهنمای Deploy to Cloudflare](https://developers.cloudflare.com/workers/platform/deploy-buttons/)
+[راهنمای Deploy to Cloudflare](https://developers.cloudflare.com/workers/platform/deploy-buttons/)
