@@ -9,4 +9,6 @@
 | [۱. ساخت ربات با BotFather](lessons/01-create-bot.md) | لینک و توکن ربات خودت را می‌گیری. |
 | [۲. راه‌اندازی فروشگاه تلگرام با پرداخت استارز](digital-shop/) | پروفایل ربات را تنظیم می‌کنی، فروشگاه را وصل می‌کنی و سفارش را از پرداخت تا تحویل پیگیری می‌کنی. |
 
+**درس دوم با گوشی** [مسیر آیفون و iOS](digital-shop/README.md#ios) · [مسیر اندروید](digital-shop/README.md#android)
+
 [کانال RR Digital Hub در یوتیوب](https://www.youtube.com/@rrdigitalhub)
