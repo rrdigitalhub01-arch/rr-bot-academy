@@ -1,0 +1,12 @@
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+.env
+.env.*
+.venv/
+
+# Cloudflare development and credentials
+node_modules/
+.wrangler/
+.dev.vars
+.env

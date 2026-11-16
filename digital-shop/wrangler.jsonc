@@ -1,0 +1,19 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "rr-academy-shop",
+  "main": "src/worker.mjs",
+  "compatibility_date": "2026-11-16",
+  "workers_dev": true,
+  "assets": {
+    "directory": "./public",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*", "/telegram/webhook"]
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "rr-academy-shop",
+      "migrations_dir": "./migrations"
+    }
+  ]
+}

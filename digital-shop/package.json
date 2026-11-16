@@ -1,0 +1,18 @@
+{
+  "name": "rr-academy-digital-shop",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=24" },
+  "scripts": {
+    "test": "node --test",
+    "dev": "wrangler d1 migrations apply DB --local && wrangler dev",
+    "deploy": "wrangler d1 migrations apply DB --remote && wrangler deploy"
+  },
+  "cloudflare": {
+    "bindings": {
+      "BOT_TOKEN": { "description": "توکن ربات آزمایشی از BotFather" },
+      "SETUP_CODE": { "description": "کد محرمانهٔ راه‌اندازی، حداقل ۱۶ نویسه؛ برای ثبت مالک نگه دارید" }
+    }
+  },
+  "devDependencies": { "wrangler": "^4.59.0" }
+}
