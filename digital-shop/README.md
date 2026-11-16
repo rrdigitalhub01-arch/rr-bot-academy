@@ -107,7 +107,7 @@
 
 ### اگر بعد از اتصال GitHub فرم نصب را گم کردی
 
-1. اگر به **Settings** گیت‌هاب رفتی و **Cloudflare Workers and Pages** را با وضعیت **Installed** دیدی، اتصال روی حساب GitHub نصب شده است. فهرست تب‌های Safari یا Chrome را باز کن و به تب فرم Cloudflare برگرد. اگر فرم هنوز **New GitHub connection** را نشان می‌دهد، یک بار همان تب را تازه‌سازی کن.
+1. اگر در GitHub صفحهٔ **Cloudflare Workers and Pages** را با بخش **Repository access** و دکمهٔ **Save** غیرفعال دیدی، برنامه قبلاً روی حساب GitHub نصب شده است. فهرست تب‌های Safari یا Chrome را باز کن و به تب قبلی Cloudflare برگرد. اگر فرم هنوز **New GitHub connection** را نشان می‌دهد، یک بار همان تب را تازه‌سازی کن و ببین آیا نام حساب در **Git account** ظاهر می‌شود. نصب برنامه در GitHub و مجوز اتصال در Cloudflare دو مرحلهٔ جدا هستند. [راهنمای اتصال GitHub به Cloudflare](https://developers.cloudflare.com/workers/ci-cd/builds/git-integration/github-integration/)
 2. اگر فرم دیگر در تب‌ها نیست و صفحهٔ اصلی Cloudflare با عنوان **Ready when you are** باز شده، از **☰** بالا سمت چپ وارد **Workers & Pages** شو. می‌توانی اسم **Workers & Pages** را در **Search** هم جست‌وجو کنی. [باز کردن داشبورد Cloudflare](https://dash.cloudflare.com/)
 3. اسم پروژه‌ات را پیدا کن. اگر نام پیش‌فرض را عوض نکردی، دنبال `rr-academy-shop` بگرد.
    - **پروژه را می‌بینی** — بازش کن و وضعیت آخرین Deploy را بررسی کن. اگر موفق شده، آدرس Worker را باز کن و به [قدم ۵](#step-5) برو. اگر هنوز در حال اجراست، از همان صفحه منتظر نتیجه بمان.
@@ -119,9 +119,10 @@
 ### اگر لینک نصب دوباره داشبورد را باز کرد
 
 1. در **Workers & Pages**، بعد از دیدن **No projects found**، روی **Create application** بزن.
-2. در صفحهٔ **Make something new**، گزینهٔ اول یعنی **Connect GitHub** را بزن تا حساب و مخزن را انتخاب کنی.
-3. اگر نسخه‌ای از قالب در حساب GitHub خودت ساخته شده، همان مخزن را برای Deploy انتخاب کن. اگر مخزن هنوز ساخته نشده و روش دستی را ادامه می‌دهی، اول یک [Fork از مخزن دوره](https://github.com/rrdigitalhub01-arch/rr-bot-academy) در حساب خودت بساز تا Cloudflare بتواند آن را ببیند.
-4. برای کپیِ کل مخزن دوره، **Root directory** را `digital-shop` بگذار. اگر فایل `wrangler.jsonc` در صفحهٔ اول مخزن خودت است، ریشهٔ همان مخزن را نگه دار. **Deploy command** باید `npm run deploy` باشد. پروژه به دیتابیس D1 با Binding برابر `DB` نیاز دارد. [راهنمای تنظیم ساخت Cloudflare Workers](https://developers.cloudflare.com/workers/ci-cd/builds/configuration/)
+2. در صفحهٔ **Make something new**، گزینهٔ اول یعنی **Connect GitHub** را بزن. اگر یک تب تازهٔ GitHub با **Repository access** باز شد، در نوار مرورگر روی آیکن تب‌ها بزن و تب قبلی **Cloudflare** را انتخاب کن. در همان تب دنبال نام حساب GitHub و فهرست مخزن‌ها بگرد.
+3. اگر حساب GitHub در Cloudflare دیده می‌شود، نسخهٔ قالب در حساب خودت را انتخاب کن. اگر هنوز کپی نداری، [مخزن دوره](https://github.com/rrdigitalhub01-arch/rr-bot-academy) را باز کن و **Fork → Create fork** را بزن. وقتی کپی در حساب خودت ساخته شد، به تب Cloudflare برگرد و فهرست مخزن‌ها را تازه‌سازی کن.
+4. اگر بعد از برگشت و یک‌بار تازه‌سازی، Cloudflare همچنان فقط **Connect GitHub** را نشان می‌دهد، در مرورگر دیگر با همان حساب‌های شخصی GitHub و Cloudflare وارد شو و مسیر را یک بار امتحان کن. اگر دوباره به همان صفحه رسیدی، برای پیگیری از تب Cloudflare و نام گزینه‌ای که آنجا می‌بینی استفاده کن. صفحهٔ **Repository access** فقط وضعیت نصب و دسترسی‌های برنامه در GitHub را نشان می‌دهد.
+5. برای کپیِ کل مخزن دوره، **Root directory** را `digital-shop` بگذار. اگر فایل `wrangler.jsonc` در صفحهٔ اول مخزن خودت است، ریشهٔ همان مخزن را نگه دار. **Deploy command** باید `npm run deploy` باشد. پروژه به دیتابیس D1 با Binding برابر `DB` نیاز دارد. [راهنمای تنظیم ساخت Cloudflare Workers](https://developers.cloudflare.com/workers/ci-cd/builds/configuration/)
 
 <a name="step-5"></a>
 
@@ -174,7 +175,7 @@
 
 | چیزی که می‌بینی | چه کار کنی |
 | --- | --- |
-| GitHub در Cloudflare انتخاب نشده | ورود با حساب شخصی و تأیید ایمیل GitHub را بررسی کن. به فرم نصب برگرد و **New GitHub connection** را بزن. |
+| GitHub دوباره صفحهٔ Repository access را باز کرد | به تب قبلی Cloudflare برگرد و نام حساب و فهرست مخزن‌ها را بررسی کن. [مراحل برگشت به Cloudflare](#cloudflare-connect-github) |
 | Deploy موفق نشده یا خطای D1 می‌بینی | Build logs و اتصال دیتابیس به Worker با نام Binding برابر `DB` را بررسی کن. |
 | ربات بعد از قدم ۶ جواب نمی‌دهد | نشانی Worker را با `/api/health` باز کن، نام و مقدار Secretها و نتیجهٔ اتصال در قدم ۶ را بررسی کن. |
 | پنل مدیریت دیده نمی‌شود | از دکمهٔ ربات وارد مینی‌اپ شو و «راه‌اندازی مدیریت» را با حساب تلگرام مالک تکمیل کن. |
