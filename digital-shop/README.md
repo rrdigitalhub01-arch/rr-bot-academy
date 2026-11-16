@@ -11,9 +11,9 @@
 ## مسیر آیفون | iOS
 
 1. در **Telegram**، عکس و معرفی ربات را در [قدم ۱](#step-1) تنظیم کن و در چت ربات [اولین `/start`](#step-2) را بفرست.
-2. این راهنما را در **Safari** باز کن. در همان مرورگر [وارد حساب GitHub خودت شو](#step-3) و [قالب را روی Cloudflare نصب کن](#step-4). پس از وصل‌کردن حساب GitHub، به زبانهٔ Cloudflare برگرد و **Deploy** را بزن. اگر فرم بسته شد، [مسیر برگشت به Cloudflare](#cloudflare-return) را دنبال کن.
-3. وقتی صفحهٔ Worker باز شد، از BotFather توکن ربات خودت را کپی کن، به Safari برگرد و آن را در [Secret کلادفلر](#step-5) وارد کن. سپس آدرس Worker را در Safari باز کن و [اتصال ربات](#step-6) را انجام بده.
-4. **«باز کردن ربات در تلگرام»** را بزن. اگر Safari گزینهٔ باز کردن Telegram را نشان داد، آن را انتخاب کن. اگر در صفحهٔ وب ماندی، برنامهٔ Telegram را باز کن و به چت همان ربات برگرد. `/start` را بفرست و از دکمهٔ «ورود به فروشگاه»، [مالکیت را ثبت کن](#step-6). بعد به [تنظیم فروشگاه](#step-7) و [پرداخت استارز](#step-8) برو.
+2. این راهنما را در **Safari** یا **Chrome** باز کن. در همان مرورگر [وارد حساب GitHub خودت شو](#step-3) و [قالب را روی Cloudflare نصب کن](#step-4). اگر بعد از **Save** به صفحهٔ **Select a repository** رسیدی، [از همان‌جا ادامه بده](#cloudflare-select-repository). اگر فرم بسته شد، [مسیر برگشت به Cloudflare](#cloudflare-return) را دنبال کن.
+3. وقتی صفحهٔ Worker باز شد، از BotFather توکن ربات خودت را کپی کن، به همان مرورگر برگرد و آن را در [Secret کلادفلر](#step-5) وارد کن. سپس آدرس Worker را باز کن و [اتصال ربات](#step-6) را انجام بده.
+4. **«باز کردن ربات در تلگرام»** را بزن. اگر مرورگر گزینهٔ باز کردن Telegram را نشان داد، آن را انتخاب کن. اگر در صفحهٔ وب ماندی، برنامهٔ Telegram را باز کن و به چت همان ربات برگرد. `/start` را بفرست و از دکمهٔ «ورود به فروشگاه»، [مالکیت را ثبت کن](#step-6). بعد به [تنظیم فروشگاه](#step-7) و [پرداخت استارز](#step-8) برو.
 
 اگر بخشی از فرم Cloudflare بیرون صفحه است، در Safari از **Page Menu** گزینهٔ **Request Desktop Website** را انتخاب کن. در بعضی نسخه‌ها این گزینه زیر **More** است. بعد از تغییر نمایش، اگر دوباره فرم ورود دیدی، با همان حساب وارد شو. [راهنمای نمایش دسکتاپ در Safari](https://support.apple.com/guide/iphone/customize-your-safari-settings-iphb3100d149/ios)
 
@@ -22,7 +22,7 @@
 ## مسیر گوشی اندرویدی
 
 1. در برنامهٔ **Telegram**، تنظیم [عکس، Description و Bio](#step-1) را انجام بده. بعد در چت ربات [دستور `/start`](#step-2) را بفرست.
-2. راهنما را در **Chrome** باز کن. در همان مرورگر [حساب GitHub خودت را آماده کن](#step-3) و [وارد فرم نصب Cloudflare شو](#step-4). وقتی GitHub را وصل کردی، به زبانهٔ Cloudflare برگرد و **Deploy** را بزن. اگر فرم بسته شد، [مسیر برگشت به Cloudflare](#cloudflare-return) را دنبال کن.
+2. راهنما را در **Chrome** باز کن. در همان مرورگر [حساب GitHub خودت را آماده کن](#step-3) و [وارد فرم نصب Cloudflare شو](#step-4). اگر بعد از **Save** به صفحهٔ **Select a repository** رسیدی، [از همان‌جا ادامه بده](#cloudflare-select-repository). اگر فرم بسته شد، [مسیر برگشت به Cloudflare](#cloudflare-return) را دنبال کن.
 3. توکن را در تلگرام کپی کن. از **برنامه‌های اخیر** روی Chrome بزن تا به همان زبانهٔ Worker برگردی. [Secretها](#step-5) را وارد کن و سپس از آدرس Worker در Chrome، [ربات را به فروشگاه وصل کن](#step-6).
 4. **«باز کردن ربات در تلگرام»** را بزن. اگر گوشی ازت پرسید لینک را با کدام برنامه باز کند، **Telegram** را انتخاب کن. اگر لینک در Chrome ماند، چت همان ربات را در برنامهٔ Telegram باز کن. بعد از `/start` و «ورود به فروشگاه»، [مالکیت را ثبت کن](#step-6) و به [شخصی‌سازی](#step-7) و [آزمایش پرداخت](#step-8) برو.
 
@@ -98,7 +98,7 @@
 ## قدم ۴ — قالب فروشگاه را روی Cloudflare نصب کن
 
 1. دکمهٔ نصب قالب را باز کن و وارد حساب Cloudflare خودت شو. [راه‌اندازی فروشگاه خودم در Cloudflare](https://deploy.workers.cloudflare.com/?url=https%3A%2F%2Fgithub.com%2Frrdigitalhub01-arch%2Frr-bot-academy%2Ftree%2Fmain%2Fdigital-shop)
-2. در **Set up your application**، روی **New GitHub connection** بزن و حساب GitHub شخصی‌ای را که در قدم ۳ آماده کردی وصل کن. Cloudflare یک نسخهٔ جدا از قالب در حساب خودت می‌سازد. با تیک **Create private Git repository** می‌توانی نسخهٔ خودت را خصوصی کنی.
+2. در **Set up your application**، روی **New GitHub connection** بزن و حساب GitHub شخصی‌ای را که در قدم ۳ آماده کردی وصل کن. اگر صفحهٔ **Cloudflare Workers and Pages** در GitHub باز شد، در بخش **Repository access**، در صورت فعال بودن **Save**، آن را بزن. اگر بعد از ذخیره، Cloudflare صفحهٔ **Select a repository** را نشان داد، [مراحل همین صفحه](#cloudflare-select-repository) را دنبال کن. در فرم **Set up your application**، Cloudflare یک نسخهٔ جدا از قالب در حساب خودت می‌سازد. با تیک **Create private Git repository** می‌توانی نسخهٔ خودت را خصوصی کنی.
 3. در **Project name** نامی برای پروژه بگذار. اگر نام پیش‌فرض آزاد است، می‌توانی همان را نگه داری.
 4. در **Select D1 database**، گزینهٔ **+ Create new** را انتخاب کن تا سفارش‌ها و موجودی این فروشگاه در دیتابیس خودش ذخیره شوند.
 5. **Deploy** را بزن. پس از موفقیت ساخت، صفحهٔ Worker و آدرس HTTPS آن را باز کن. اگر Deploy خطا داد، اولین خطای ثبت‌شده در Build logs را بررسی کن.
@@ -119,10 +119,17 @@
 ### اگر لینک نصب دوباره داشبورد را باز کرد
 
 1. در **Workers & Pages**، بعد از دیدن **No projects found**، روی **Create application** بزن.
-2. در صفحهٔ **Make something new**، گزینهٔ اول یعنی **Connect GitHub** را بزن. اگر یک تب تازهٔ GitHub با **Repository access** باز شد، در نوار مرورگر روی آیکن تب‌ها بزن و تب قبلی **Cloudflare** را انتخاب کن. در همان تب دنبال نام حساب GitHub و فهرست مخزن‌ها بگرد.
-3. اگر حساب GitHub در Cloudflare دیده می‌شود، نسخهٔ قالب در حساب خودت را انتخاب کن. اگر هنوز کپی نداری، [مخزن دوره](https://github.com/rrdigitalhub01-arch/rr-bot-academy) را باز کن و **Fork → Create fork** را بزن. وقتی کپی در حساب خودت ساخته شد، به تب Cloudflare برگرد و فهرست مخزن‌ها را تازه‌سازی کن.
-4. اگر بعد از برگشت و یک‌بار تازه‌سازی، Cloudflare همچنان فقط **Connect GitHub** را نشان می‌دهد، در مرورگر دیگر با همان حساب‌های شخصی GitHub و Cloudflare وارد شو و مسیر را یک بار امتحان کن. اگر دوباره به همان صفحه رسیدی، برای پیگیری از تب Cloudflare و نام گزینه‌ای که آنجا می‌بینی استفاده کن. صفحهٔ **Repository access** فقط وضعیت نصب و دسترسی‌های برنامه در GitHub را نشان می‌دهد.
-5. برای کپیِ کل مخزن دوره، **Root directory** را `digital-shop` بگذار. اگر فایل `wrangler.jsonc` در صفحهٔ اول مخزن خودت است، ریشهٔ همان مخزن را نگه دار. **Deploy command** باید `npm run deploy` باشد. پروژه به دیتابیس D1 با Binding برابر `DB` نیاز دارد. [راهنمای تنظیم ساخت Cloudflare Workers](https://developers.cloudflare.com/workers/ci-cd/builds/configuration/)
+2. در صفحهٔ **Make something new**، گزینهٔ اول یعنی **Connect GitHub** را بزن. اگر صفحهٔ **Repository access** در GitHub باز شد و **Save** فعال بود، آن را بزن. اگر در GitHub ماندی، از فهرست تب‌های مرورگر به تب قبلی Cloudflare برگرد.
+3. وقتی صفحهٔ **Select a repository** را دیدی، مراحل زیر را دنبال کن.
+
+<a name="cloudflare-select-repository"></a>
+
+### بعد از Save در GitHub، اگر Select a repository باز شد
+
+1. در Cloudflare، اگر دکمهٔ آبی **Connect GitHub account** را می‌بینی، آن را بزن. اگر GitHub صفحهٔ **Authorize** را باز کرد، مجوز برنامهٔ **Cloudflare Workers and Pages** را با همان حساب شخصی تأیید کن و به Cloudflare برگرد. [راهنمای مجوز دادن به برنامهٔ Cloudflare](https://developers.cloudflare.com/workers/ci-cd/builds/git-integration/github-integration/)
+2. وقتی فهرست مخزن‌ها ظاهر شد، نسخهٔ قالب زیر نام حساب خودت را انتخاب کن و **Next** را بزن. اگر حساب را می‌بینی و هنوز کپی قالب نداری، [مخزن دوره](https://github.com/rrdigitalhub01-arch/rr-bot-academy) را باز کن و **Fork → Create fork** را بزن. وقتی کپی ساخته شد، به Cloudflare برگرد و فهرست را تازه‌سازی کن.
+3. اگر بعد از زدن **Connect GitHub account** دوباره به **Repository access** رفتی، به همین صفحهٔ **Select a repository** برگرد و یک بار تازه‌سازی کن. اگر همچنان فقط همان دکمه را می‌بینی، مسیر اتصال را یک بار در مرورگر دیگری با همان دو حساب امتحان کن.
+4. در تنظیمات Worker، برای کپیِ کل مخزن دوره، **Root directory** را `digital-shop` بگذار. اگر فایل `wrangler.jsonc` در صفحهٔ اول مخزن خودت است، ریشهٔ همان مخزن را نگه دار. **Deploy command** را `npm run deploy` بگذار. پروژه به دیتابیس D1 با Binding برابر `DB` نیاز دارد. [راهنمای تنظیم ساخت Cloudflare Workers](https://developers.cloudflare.com/workers/ci-cd/builds/configuration/)
 
 <a name="step-5"></a>
 
