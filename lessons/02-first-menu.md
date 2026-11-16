@@ -3,10 +3,6 @@
 [راهنمای کامل درس دوم و قالب فروشگاه](../digital-shop/)
 
 <a name="step-9"></a>
-<a name="step-9-github"></a>
-
-[ساخت حساب شخصی GitHub](../digital-shop/README.md#step-3)
-
 <a name="step-9-cloudflare"></a>
 
-[نصب قالب روی Cloudflare](../digital-shop/README.md#step-4)
+[ساخت Worker و وارد کردن کد فروشگاه](../digital-shop/README.md#step-3)
