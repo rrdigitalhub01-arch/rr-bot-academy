@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
 import { test } from 'node:test';
 import worker from '../src/worker.mjs';
+import dashboardWorker from '../dashboard/worker.mjs';
 import { defaultCatalog } from '../src/catalog.mjs';
 import { webhookSecret } from '../src/telegram.mjs';
 
@@ -20,18 +21,19 @@ function signedProfile(id, authDate = Math.floor(Date.now() / 1000)) {
   return 'tma ' + params;
 }
 
-function fixture(mode = 'training') {
+function fixture(mode = 'training', { handler = worker, empty = false } = {}) {
   const sqlite = new DatabaseSync(':memory:');
-  for (const migration of ['0001_shop.sql', '0002_stars.sql']) {
-    sqlite.exec(readFileSync(new URL('../migrations/' + migration, import.meta.url), 'utf8'));
+  if (!empty) {
+    for (const migration of ['0001_shop.sql', '0002_stars.sql']) {
+      sqlite.exec(readFileSync(new URL('../migrations/' + migration, import.meta.url), 'utf8'));
+    }
   }
 
   function bind(sql, args) {
-    const stmt = sqlite.prepare(sql);
     return {
-      async first() { return stmt.get(...args) ?? null; },
-      async all() { return { results: stmt.all(...args) }; },
-      async run() { return { meta: { changes: stmt.run(...args).changes } }; }
+      async first() { return sqlite.prepare(sql).get(...args) ?? null; },
+      async all() { return { results: sqlite.prepare(sql).all(...args) }; },
+      async run() { return { meta: { changes: sqlite.prepare(sql).run(...args).changes } }; }
     };
   }
 
@@ -64,7 +66,7 @@ function fixture(mode = 'training') {
       },
       body: data ? JSON.stringify(data) : undefined
     });
-    const response = await worker.fetch(request, env);
+    const response = await handler.fetch(request, env);
     return { status: response.status, json: await response.json() };
   };
 }
@@ -101,6 +103,30 @@ test('onboarding and webhook use only the assigned bot and a safe private secret
   } finally {
     globalThis.fetch = fetchOriginal;
   }
+});
+
+test('dashboard bundle serves storefront assets and initializes a fresh D1 during setup', async (t) => {
+  for (const [path, file] of [
+    ['/setup', 'index.html'],
+    ['/shop.js', 'shop.js'],
+    ['/assets/gift.webp', 'assets/gift.webp']
+  ]) {
+    const response = await dashboardWorker.fetch(new Request(origin + path), {});
+    assert.equal(response.status, 200);
+    assert.deepEqual(Buffer.from(await response.arrayBuffer()), readFileSync(new URL('../public/' + file, import.meta.url)));
+  }
+
+  const request = fixture('training', { handler: dashboardWorker, empty: true });
+  const telegram = t.mock.method(globalThis, 'fetch', () =>
+    Response.json({ ok: true, result: { username: 'test_shop_bot' } }));
+  const connect = code => request('/api/setup/connect', { method: 'POST', data: { code } });
+
+  assert.equal((await connect('wrong')).status, 403);
+  assert.equal(telegram.mock.callCount(), 0);
+  assert.equal((await connect(code)).json.botUrl, 'https://t.me/test_shop_bot');
+  assert.equal((await connect(code)).status, 200);
+  assert.equal((await request('/api/health')).status, 200);
+  assert.equal((await request('/api/setup/claim', { method: 'POST', data: { code }, id: 100 })).status, 200);
 });
 
 test('owner changes catalog and adds a fourth product; server price and order access are authoritative', async () => {
