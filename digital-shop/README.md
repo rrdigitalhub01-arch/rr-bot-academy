@@ -4,6 +4,8 @@
 
 **پیش‌نیازها** ربات قسمت اول، توکن آن، یک ایمیل در دسترس و برنامهٔ Telegram روی گوشی. GitHub و Cloudflare را با مرورگر همان گوشی باز می‌کنی. [قسمت اول | ساخت ربات در BotFather](https://github.com/rrdigitalhub01-arch/rr-bot-academy/blob/main/lessons/01-create-bot.md)
 
+**نصب از گوشی با حساب Cloudflare** از [راهنمای نصب بدون حساب GitHub](#dashboard-install) استفاده کن. بعد از تنظیم BotFather، فایل Worker آماده را در داشبورد Cloudflare نصب می‌کنی و به [اتصال ربات](#step-6) می‌رسی.
+
 **مسیر گوشی‌ات را انتخاب کن:** [آیفون و iOS](#ios) · [اندروید](#android)
 
 <a name="ios"></a>
@@ -181,6 +183,19 @@
 | محصول یا دکمهٔ خرید ظاهر نمی‌شود | نمایش محصول، فعال بودن فروش واقعی، لینک شرایط و پشتیبانی و موجودی همان پلن را بررسی کن. |
 | سفارش در «در حال بررسی پرداخت» مانده | سفارش‌ها را به‌روزرسانی کن و وضعیت رسید را در تلگرام بررسی کن. تحویل را بعد از ثبت «پرداخت شد» انجام بده. |
 
+<a name="dashboard-install"></a>
+
+## نصب از داشبورد Cloudflare بدون حساب GitHub
+
+1. [قدم ۱](#step-1) و [قدم ۲](#step-2) را در تلگرام انجام بده. سپس با **Safari** در آیفون یا **Chrome** در اندروید وارد [داشبورد حساب Cloudflare خودت](https://dash.cloudflare.com/) شو.
+2. در **Workers & Pages → Create application** گزینهٔ **Start with Hello World** را بزن، یک نام برای Worker بگذار و **Deploy** را بزن تا Worker اولیه ساخته شود.
+3. [فایل آمادهٔ Worker](dashboard/worker.mjs) را باز کن. روی **Raw** بزن و تمام متن فایل را کپی کن. در تب Cloudflare وارد Worker شو، **Edit Code** را بزن، محتوای فایل نمونهٔ `worker.js` را کامل انتخاب کن و کد آماده را جایش بچسبان. **Deploy** را بزن. اگر ویرایشگر روی گوشی کامل دیده نشد، حالت نمایش دسکتاپ را در Safari یا Chrome روشن کن.
+4. در داشبورد Cloudflare صفحهٔ **D1 SQL Database** را باز کن و یک دیتابیس تازه بساز. به Worker برگرد و در **Bindings → Add binding → D1 database** نام متغیر را دقیقاً `DB` بگذار و دیتابیس تازه را انتخاب کن.
+5. مطابق [قدم ۵](#step-5)، `BOT_TOKEN` و `SETUP_CODE` را در **Variables and Secrets** با نوع **Secret** وارد کن. برای ضبط ویدیو پیش از وارد کردن این دو مقدار، ضبط صفحه را متوقف کن.
+6. آدرس HTTPS Worker را با پسوند `/setup` باز کن، مثلاً `https://your-shop.example.workers.dev/setup`. کد راه‌اندازی را وارد کن و **«اتصال ربات به فروشگاه»** را بزن. جدول‌های دیتابیس تازه در همین مرحله ساخته می‌شوند. سپس از بند ۳ [قدم ۶](#step-6) به تلگرام برگرد و `/start` و ثبت مالک را انجام بده.
+
+[راهنمای Cloudflare برای ساخت Worker](https://developers.cloudflare.com/learning-paths/workers/get-started/first-worker/) · [اتصال D1 از داشبورد](https://developers.cloudflare.com/d1/best-practices/remote-development/)
+
 ## اجرای محلی برای توسعه‌دهنده‌ها
 
 از پوشهٔ قالب و با Node.js 24، دستورهای زیر را اجرا کن. Wrangler دیتابیس محلی را آماده و آدرس پیش‌نمایش را نمایش می‌دهد.
@@ -192,5 +207,7 @@ npm run dev
 ```
 
 در مرورگر عادی، پیش‌نمایش تمرینی کالاها و روند سفارش را می‌بینی. تست خودکار مسیر پرداخت را با پاسخ شبیه‌سازی‌شدهٔ تلگرام بررسی می‌کند. در نصب عادی، پاسخ سالم `/api/health` شامل `ok: true` و `mode: live` است. تنظیمات عمومی کاتالوگ از پنل در قالب JSON قابل ذخیره‌اند. توکن‌ها، سفارش‌ها و کدهای تحویل در فایل کاتالوگ قرار نمی‌گیرند.
+
+برای بازسازی فایل آمادهٔ داشبورد پس از تغییر سورس، `npm run build:dashboard` را اجرا کن.
 
 [راهنمای Deploy to Cloudflare](https://developers.cloudflare.com/workers/platform/deploy-buttons/)

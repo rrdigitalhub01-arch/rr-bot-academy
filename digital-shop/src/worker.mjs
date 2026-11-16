@@ -244,11 +244,12 @@ async function connectTelegram(env, url, label) {
   });
 }
 
-async function setup(request, url, env) {
+async function setup(request, url, env, initializeDatabase) {
   check(env.BOT_TOKEN && env.SETUP_CODE?.length >= 16,
     'ابتدا BOT_TOKEN و SETUP_CODE (حداقل ۱۶ نویسه) را در Cloudflare وارد کن.', 503, 'setup_missing');
   const { code } = await body(request);
   check(equal(code, env.SETUP_CODE), 'کد راه‌اندازی درست نیست.', 403, 'setup_code');
+  if (url.pathname === '/api/setup/connect' && initializeDatabase) await initializeDatabase(env.DB);
   const state = await shopState(env.DB);
   if (url.pathname === '/api/setup/connect') {
     check(!state.owner, 'راه‌اندازی اولیه قبلاً انجام شده است.', 409, 'setup_done');
@@ -307,7 +308,7 @@ async function webhook(request, url, env) {
   return json({ ok: true });
 }
 
-async function route(request, env) {
+async function route(request, env, initializeDatabase) {
   const url = new URL(request.url);
   const path = url.pathname;
   const method = request.method;
@@ -323,7 +324,7 @@ async function route(request, env) {
     return json(await publicCatalog(env.DB, catalog, mode));
   }
   if (method === 'POST' && (path === '/api/setup/connect' || path === '/api/setup/claim')) {
-    return setup(request, url, env);
+    return setup(request, url, env, initializeDatabase);
   }
   const profile = await profileFrom(request, env.BOT_TOKEN);
   const state = await shopState(env.DB);
@@ -386,14 +387,18 @@ async function route(request, env) {
   return json({ error: 'مسیر پیدا نشد.', code: 'not_found' }, 404);
 }
 
-export default {
-  async fetch(request, env) {
-    try {
-      return await route(request, env);
-    } catch (error) {
-      if (error instanceof ShopError) return json({ error: error.message, code: error.code }, error.status);
-      console.error('Shop request failed:', error.name);
-      return json({ error: 'درخواست انجام نشد. دوباره تلاش کن.', code: 'server_error' }, 500);
+export function createWorker(initializeDatabase) {
+  return {
+    async fetch(request, env) {
+      try {
+        return await route(request, env, initializeDatabase);
+      } catch (error) {
+        if (error instanceof ShopError) return json({ error: error.message, code: error.code }, error.status);
+        console.error('Shop request failed:', error.name);
+        return json({ error: 'درخواست انجام نشد. دوباره تلاش کن.', code: 'server_error' }, 500);
+      }
     }
-  }
-};
+  };
+}
+
+export default createWorker();

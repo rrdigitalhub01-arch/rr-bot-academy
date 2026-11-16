@@ -5,6 +5,7 @@
   "engines": { "node": ">=24" },
   "scripts": {
     "test": "node --test",
+    "build:dashboard": "node scripts/build-dashboard.mjs",
     "dev": "wrangler d1 migrations apply DB --local && wrangler dev",
     "deploy": "wrangler d1 migrations apply DB --remote && wrangler deploy"
   },
@@ -14,5 +15,8 @@
       "SETUP_CODE": { "description": "کد محرمانهٔ راه‌اندازی، حداقل ۱۶ نویسه؛ برای ثبت مالک نگه دارید" }
     }
   },
-  "devDependencies": { "wrangler": "^4.59.0" }
+  "devDependencies": {
+    "esbuild": "0.28.2",
+    "wrangler": "^4.59.0"
+  }
 }
