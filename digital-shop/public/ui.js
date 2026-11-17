@@ -1,4 +1,4 @@
-import {defaults, safeUrl} from "./model.js";
+import {defaults, imageUrl, safeUrl} from "./model.js";
 
 const faNumber = new Intl.NumberFormat("fa-IR");
 const faDate = new Intl.DateTimeFormat("fa-IR", {dateStyle: "medium", timeStyle: "short"});
@@ -64,8 +64,8 @@ export function select(options, value, attributes = {}) {
   return control;
 }
 
-export function picture(image, style, alt = "", lazy = true) {
-  const url = safeUrl(image, true);
+export function picture(image, style, alt = "", lazy = true, preview) {
+  const url = preview ?? imageUrl(image);
   const fallback = () => node("div", {class: style + " picture-fallback", "aria-hidden": "true"}, "◇");
   if (!url) return fallback();
   const img = node("img", {class: style, src: url, alt, decoding: "async", loading: lazy ? "lazy" : "eager",

@@ -9,7 +9,7 @@ const notice = document.querySelector("#notice");
 const telegram = window.Telegram?.WebApp;
 const demo = !telegram?.initData && !location.pathname.startsWith("/setup");
 const api = demo ? createDemoApi() : createRemoteApi(telegram);
-const icons = {shop: "▦", cart: "▱", orders: "☷"};
+const icons = {shop: "▦", cart: "▱", orders: "☷", pages: "▤"};
 const state = {
   page: location.pathname.startsWith("/setup") ? "setup" : "shop",
   owner: false, hasOwner: true, training: true, category: "", query: "", shopScroll: 0,
@@ -89,11 +89,14 @@ function renderNav() {
   navigation.hidden = ["studio", "setup"].includes(state.page);
   if (navigation.hidden) return;
   const count = state.cart.reduce((sum, item) => sum + item.quantity, 0);
-  navigation.replaceChildren(...["shop", "cart", "orders"].map(page =>
+  const pages = ["shop", "cart", "orders"];
+  if (state.catalog.pages?.length) pages.push("pages");
+  navigation.classList.toggle("with-pages", pages.length === 4);
+  navigation.replaceChildren(...pages.map(page =>
     node("button", {type: "button", onclick: () => go(page), "aria-current": (state.page === page ||
-      page === "shop" && state.page === "detail") ? "page" : undefined},
+      page === "shop" && state.page === "detail" || page === "pages" && state.page.startsWith("page:")) ? "page" : undefined},
     node("span", {class: "nav-icon", "aria-hidden": "true"}, icons[page]),
-    node("span", {}, state.catalog.settings.labels[page], page === "cart" && count ? " · " + fmt(count) : "")),
+    node("span", {}, page === "pages" ? "صفحه‌ها" : state.catalog.settings.labels[page], page === "cart" && count ? " · " + fmt(count) : "")),
   ));
 }
 
@@ -111,13 +114,43 @@ function render() {
     showDetail();
     return;
   }
-  telegram?.BackButton?.hide();
-  if (state.page === "cart") showCart();
+  if (state.page.startsWith("page:")) telegram?.BackButton?.show();
+  else telegram?.BackButton?.hide();
+  if (state.page === "pages" || state.page.startsWith("page:")) showPages();
+  else if (state.page === "cart") showCart();
   else if (state.page === "orders") showOrders();
   else if (state.page === "studio") {
     showStudio({screen, api, demo, training: state.training, notify, updateCatalog, rerender: render, go});
   } else if (state.page === "setup") showSetup();
   else showShop();
+}
+
+function renderBuyerPage(content) {
+  const productPage = state.page === "detail" ? "product:" + state.product.id : "";
+  const actions = (state.catalog.pageButtons ?? []).filter(option => option.page === state.page || option.page === productPage)
+    .map(({label, target}) => {
+      if (safeUrl(target)) return href(label, target, "subtle");
+      if (target.startsWith("product:")) {
+        const product = state.catalog.products.find(product => product.id === target.slice(8));
+        return product && button(label, () => openProduct(product), "subtle");
+      }
+      return button(label, () => go(target), "subtle");
+    }).filter(Boolean);
+  if (actions.length) content.append(node("nav", {class: "row wrap page-options", "aria-label": "گزینه‌های صفحه"}, actions));
+  screen.replaceChildren(content);
+}
+
+function showPages() {
+  const pages = state.catalog.pages ?? [];
+  const page = pages.find(page => "page:" + page.id === state.page);
+  const content = page ? node("section", {class: "panel stack narrow"},
+    node("h1", {}, page.title),
+    page.text && node("p", {class: "page-text"}, page.text),
+  ) : node("section", {class: "stack narrow"},
+    node("h1", {}, "صفحه‌ها"),
+    pages.map(page => button(page.title, () => go("page:" + page.id), "subtle")),
+  );
+  renderBuyerPage(content);
 }
 
 function featuredBanner(settings, products, openProduct) {
@@ -175,7 +208,7 @@ function showShop() {
       empty("محصولی پیدا نشد", "عبارت جست‌وجو یا دسته را عوض کنید."));
   }
   showProducts();
-  screen.replaceChildren(node("div", {class: "stack"},
+  renderBuyerPage(node("div", {class: "stack"},
     node("div", {class: "stack compact"},
       node("h1", {}, settings.labels.shop),
       settings.welcome && node("p", {class: "muted"}, settings.welcome),
@@ -227,7 +260,7 @@ function showDetail() {
   );
   if (product.delivery === "link") {
     if (safeUrl(product.link)) content.append(href("مشاهدهٔ راهنمای رسمی", product.link, "primary"));
-    screen.replaceChildren(content);
+    renderBuyerPage(content);
     return;
   }
   const form = node("form", {class: "panel stack", onsubmit: event => { event.preventDefault(); addToCart(product); }});
@@ -270,7 +303,7 @@ function showDetail() {
   form.append(node("h2", {}, "انتخاب پلن"), variants, ...product.fields.map(customerField), quantityArea);
   syncVariant();
   content.append(form);
-  screen.replaceChildren(content);
+  renderBuyerPage(content);
 }
 
 function addToCart(product) {
@@ -311,7 +344,7 @@ function showCart() {
   const content = node("div", {class: "stack narrow"}, node("h1", {}, settings.labels.cart));
   if (state.cart.length === 0) {
     content.append(empty("سبد خرید خالی است", "با انتخاب یک محصول، خریدت را شروع کن.", navigateToShop));
-    screen.replaceChildren(content);
+    renderBuyerPage(content);
     return;
   }
   let total = 0;
@@ -367,7 +400,7 @@ function showCart() {
     state.training && node("p", {class: "muted"}, "این سفارش آزمایشی است و مبلغی پرداخت نمی‌شود."),
     consent, submit,
   ));
-  screen.replaceChildren(content);
+  renderBuyerPage(content);
 }
 
 function openInvoice(url) {
@@ -432,23 +465,24 @@ function invoiceActions(order) {
 }
 
 async function showOrders() {
-  const container = node("div", {class: "stack narrow"},
-    node("h1", {}, state.catalog.settings.labels.orders),
+  const ordersContent = node("div", {class: "stack"},
     node("p", {class: "loading", role: "status"}, "در حال دریافت سفارش‌ها…"),
   );
-  screen.replaceChildren(container);
+  const container = node("div", {class: "stack narrow"},
+    node("h1", {}, state.catalog.settings.labels.orders), ordersContent,
+  );
+  renderBuyerPage(container);
   try {
     const {orders} = await api("/api/orders");
     if (!container.isConnected) return;
-    container.lastElementChild.remove();
-    container.append(button("به‌روزرسانی سفارش‌ها", () => showOrders(), "ghost"));
-    if (orders.length) container.append(...orders.map(order => orderCard(order, order.mode ? order.mode === "training" : state.training, invoiceActions(order))));
-    else container.append(
+    ordersContent.replaceChildren(button("به‌روزرسانی سفارش‌ها", () => showOrders(), "ghost"));
+    if (orders.length) ordersContent.append(...orders.map(order => orderCard(order, order.mode ? order.mode === "training" : state.training, invoiceActions(order))));
+    else ordersContent.append(
       empty("هنوز سفارشی ثبت نشده", "سفارش‌های این فروشگاه اینجا دیده می‌شوند.", button("مشاهدهٔ محصولات", () => go("shop"), "primary")),
     );
   } catch (error) {
     if (!container.isConnected) return;
-    container.lastElementChild.replaceWith(empty("سفارش‌ها دریافت نشد", error.message, button("تلاش دوباره", showOrders, "primary")));
+    ordersContent.replaceChildren(empty("سفارش‌ها دریافت نشد", error.message, button("تلاش دوباره", showOrders, "primary")));
   }
 }
 
@@ -521,6 +555,7 @@ async function start() {
 telegram?.ready();
 telegram?.expand();
 telegram?.BackButton?.onClick(() => {
-  if (state.page === "detail" || state.page === "studio") go("shop");
+  if (state.page.startsWith("page:")) go("pages");
+  else if (state.page === "detail" || state.page === "studio") go("shop");
 });
 start();

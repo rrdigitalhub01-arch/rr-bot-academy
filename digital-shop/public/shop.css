@@ -81,7 +81,7 @@ code { direction: ltr; unicode-bidi: isolate; overflow-wrap: anywhere; }
   font: 700 13px/1 Arial, sans-serif;
   overflow: hidden;
 }
-.brand-mark img { inline-size: 100%; block-size: 100%; object-fit: cover; }
+.brand-mark img { inline-size: 100%; block-size: 100%; object-fit: contain; }
 .badge { display: inline-block; color: var(--highlight); font-size: 11px; }
 .header-actions { gap: 6px; }
 .header-actions .button { min-block-size: 36px; padding: 3px 11px; font-size: 12px; white-space: nowrap; }
@@ -303,6 +303,7 @@ textarea { resize: vertical; }
   background: color-mix(in srgb, var(--panel) 94%, transparent);
   backdrop-filter: blur(12px);
 }
+.nav.with-pages { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .nav button {
   display: grid;
   justify-items: center;
@@ -372,3 +373,26 @@ code.verbatim { display: block; }
   .header-inner { gap: 6px; }
   .header-actions .button { padding-inline: 7px; }
 }
+
+.image-editor {
+  min-inline-size: 0;
+  padding: 12px;
+  margin: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+.image-sample {
+  inline-size: min(100%, 220px);
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  border-radius: 10px;
+  background: var(--background);
+}
+.image-sample.logo-sample { inline-size: 76px; aspect-ratio: 1; }
+.image-sample.banner-sample { inline-size: min(100%, 320px); aspect-ratio: 2.3; }
+.image-sample-picture { display: block; inline-size: 100%; block-size: 100%; object-fit: cover; }
+.logo-sample .image-sample-picture { object-fit: contain; }
+.file-button { position: relative; cursor: pointer; }
+.file-input { position: absolute; opacity: 0; inset: 0; padding: 0; cursor: pointer; }
+.file-button:focus-within { outline: 2px solid var(--highlight); outline-offset: 2px; }
+.page-text { white-space: pre-wrap; overflow-wrap: anywhere; }

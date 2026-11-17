@@ -1,3 +1,5 @@
+import { cleanPages } from "../public/pages.js";
+import { mediaPath } from "../public/media.js";
 import { defaultCatalog } from "../public/default-catalog.js";
 
 export { defaultCatalog };
@@ -42,7 +44,7 @@ function color(value) {
 function publicUrl(value, { media = false } = {}) {
   const url = string(value ?? '', 640);
   if (!url) return '';
-  if (media && /^\/assets\/[\w.-]+$/.test(url)) return url;
+  if (media && (/^\/assets\/[\w.-]+$/.test(url) || mediaPath.test(url))) return url;
   check(/^https:\/\/[^\s]+$/.test(url), 'لینک باید با https:// شروع شود.');
   try {
     const parsed = new URL(url);
@@ -104,7 +106,12 @@ export function cleanCatalog(input) {
       active: item.active === true, liveEnabled: item.liveEnabled === true, delivery: item.delivery, link, variants, fields
     };
   }));
-  return { settings, categories, products };
+  try {
+    return { settings, categories, products, ...cleanPages(input, products, publicUrl) };
+  } catch (error) {
+    if (error instanceof ShopError) throw error;
+    throw new ShopError(400, error.message);
+  }
 }
 
 export function orderItems(catalog, requested) {

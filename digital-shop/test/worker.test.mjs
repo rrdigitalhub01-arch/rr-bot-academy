@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { createHmac } from 'node:crypto';
+import { createHash, createHmac } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
 import { test } from 'node:test';
@@ -56,7 +56,7 @@ function fixture(mode = 'training', { handler = worker, empty = false } = {}) {
     }
   };
 
-  return async function request(path, { id, method = 'GET', data, headers } = {}) {
+  return async function request(path, { id, method = 'GET', data, headers, bytes, raw = false } = {}) {
     const request = new Request(origin + path, {
       method,
       headers: {
@@ -64,10 +64,10 @@ function fixture(mode = 'training', { handler = worker, empty = false } = {}) {
         ...(data ? { 'Content-Type': 'application/json' } : {}),
         ...headers
       },
-      body: data ? JSON.stringify(data) : undefined
+      body: data ? JSON.stringify(data) : bytes
     });
     const response = await handler.fetch(request, env);
-    return { status: response.status, json: await response.json() };
+    return raw ? response : { status: response.status, json: await response.json() };
   };
 }
 
@@ -109,6 +109,8 @@ test('dashboard bundle serves storefront assets and initializes a fresh D1 durin
   for (const [path, file] of [
     ['/setup', 'index.html'],
     ['/shop.js', 'shop.js'],
+    ['/image-editor.js', 'image-editor.js'],
+    ['/pages.js', 'pages.js'],
     ['/assets/gift.webp', 'assets/gift.webp']
   ]) {
     const response = await dashboardWorker.fetch(new Request(origin + path), {});
@@ -170,6 +172,52 @@ test('owner changes catalog and adds a fourth product; server price and order ac
   assert.equal((await request('/api/admin/codes', { id: 100 })).json.codes[0].assigned, 1);
   assert.equal(JSON.stringify((await request('/api/catalog')).json).includes('TRAINING-01'), false);
   assert.equal((await request('/api/orders', { id: 102 })).json.orders.length, 0);
+});
+
+test('existing dashboard installs can publish photos and custom page options', async () => {
+  const request = fixture('training', { handler: dashboardWorker });
+  const catalog = structuredClone(defaultCatalog);
+  const image = readFileSync(new URL('../public/assets/gift.webp', import.meta.url));
+  const imageId = createHash('sha256').update(image).digest('hex');
+  const publicPath = '/api/media/' + imageId;
+  const uploadPath = '/api/admin/media/' + imageId;
+  const upload = { method: 'PUT', bytes: image, headers: { 'Content-Type': 'image/webp' } };
+  const save = { method: 'PUT', id: 100, data: catalog };
+  Object.assign(catalog.settings, { logo: publicPath, bannerImage: publicPath });
+  catalog.products[0].image = publicPath;
+  catalog.pages = [{ id: 'help', title: 'راهنما', text: 'روش خرید' }];
+  catalog.pageButtons = [
+    { page: 'shop', label: 'راهنما', target: 'page:help' },
+    { page: 'page:help', label: 'مشاهدهٔ محصول', target: 'product:' + catalog.products[0].id }
+  ];
+
+  await request('/api/setup/claim', { method: 'POST', data: { code }, id: 100 });
+  assert.equal((await request(publicPath, { raw: true })).status, 404);
+  assert.equal((await request('/api/admin/catalog', save)).status, 400);
+  assert.equal((await request(uploadPath, { ...upload, id: 101 })).status, 403);
+  assert.equal((await request(uploadPath, { ...upload, id: 100, bytes: Buffer.from('<svg/>') })).status, 415);
+  assert.equal((await request(uploadPath, { ...upload, id: 100, bytes: Buffer.alloc(450001) })).status, 413);
+  assert.equal((await request(uploadPath, { ...upload, id: 100 })).status, 201);
+  assert.equal((await request(uploadPath, { ...upload, id: 100 })).status, 201);
+  assert.equal((await request('/api/admin/catalog', save)).status, 200);
+
+  const response = await request(publicPath, { raw: true });
+  assert.equal(response.headers.get('content-type'), 'image/webp');
+  assert.equal(response.headers.get('x-content-type-options'), 'nosniff');
+  assert.deepEqual(Buffer.from(await response.arrayBuffer()), image);
+  const head = await request(publicPath, { method: 'HEAD', raw: true });
+  assert.equal(head.headers.get('content-length'), String(image.length));
+  assert.equal((await head.arrayBuffer()).byteLength, 0);
+
+  const { json: storefront } = await request('/api/catalog');
+  assert.equal(storefront.settings.logo, publicPath);
+  assert.equal(storefront.settings.bannerImage, publicPath);
+  assert.equal(storefront.products[0].image, publicPath);
+  assert.deepEqual(storefront.pages, catalog.pages);
+  assert.deepEqual(storefront.pageButtons, catalog.pageButtons);
+  catalog.pageButtons[1].target = 'javascript:alert(1)';
+  assert.equal((await request('/api/admin/catalog', save)).status, 400);
+  assert.deepEqual((await request('/api/catalog')).json.pageButtons, storefront.pageButtons);
 });
 
 test('rejects stale Telegram identity, unchecked fields, and non-purchasable listings', async () => {
