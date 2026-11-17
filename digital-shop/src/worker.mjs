@@ -1,3 +1,5 @@
+import { mediaPath } from '../public/media.js';
+import { checkCatalogMedia, getImage, storeImage } from './media.mjs';
 import { check, cleanCatalog, defaultCatalog, identifier, orderItems, ShopError } from './catalog.mjs';
 import { equal, profileFrom, telegram, webhookSecret } from './telegram.mjs';
 import { approveCheckout, cancelInvoice, holdTime, invoiceFor, recordPayment, recordRefund, refundOrder } from './stars.mjs';
@@ -319,6 +321,8 @@ async function route(request, env, initializeDatabase) {
     await shopState(env.DB);
     return json({ ok: true, mode });
   }
+  const publicImage = path.match(mediaPath);
+  if (publicImage && (method === 'GET' || method === 'HEAD')) return getImage(env.DB, publicImage[1], method);
   if (path === '/api/catalog' && method === 'GET') {
     const { catalog } = await shopState(env.DB);
     return json(await publicCatalog(env.DB, catalog, mode));
@@ -359,9 +363,15 @@ async function route(request, env, initializeDatabase) {
     await connectTelegram(env, url, state.catalog.settings.labels.enter);
     return json({ ok: true });
   }
+  const imageUpload = path.startsWith('/api/admin/') && path.replace('/api/admin/', '/api/').match(mediaPath);
+  if (imageUpload && method === 'PUT') {
+    await storeImage(env.DB, imageUpload[1], request);
+    return json({ ok: true }, 201);
+  }
   if (path === '/api/admin/catalog' && method === 'GET') return json(state.catalog);
   if (path === '/api/admin/catalog' && method === 'PUT') {
     const catalog = cleanCatalog(await body(request));
+    await checkCatalogMedia(env.DB, catalog);
     await env.DB.prepare('UPDATE shop_state SET catalog = ?, revision = revision + 1 WHERE id = 1').bind(JSON.stringify(catalog)).run();
     return json(catalog);
   }

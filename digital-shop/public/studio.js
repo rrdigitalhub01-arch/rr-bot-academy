@@ -1,7 +1,10 @@
+import {photoField} from "./image-editor.js";
+import {catalogMedia} from "./media.js";
+import {maxButtonsPerPage, maxPageButtons, maxPages, pageChoices} from "./pages.js";
 import {cleanCatalog, defaults, id, safeUrl} from "./model.js";
 import {button, empty, field, fmt, input, node, orderCard, picture, price, select, setTheme} from "./ui.js";
 
-const tabs = [["appearance", "طراحی"], ["catalog", "محصولات"], ["orders", "سفارش‌های مدیریت"]];
+const tabs = [["appearance", "طراحی"], ["catalog", "محصولات"], ["pages", "صفحه‌ها و گزینه‌ها"], ["orders", "سفارش‌های مدیریت"]];
 const delivery = [["manual", "تحویل دستی"], ["code", "کد یا لینک یکتا"], ["gift", "ارسال گیفت"], ["link", "راهنما یا لینک رسمی"]];
 const font = [["system", "فونت دستگاه"], ["tahoma", "تاهوما"], ["serif", "نازنین، در صورت نصب"]];
 const labelNames = {
@@ -47,14 +50,38 @@ export async function showStudio({screen, api, demo, training, notify, updateCat
   screen.replaceChildren(container);
   try {
     let draft = await api("/api/admin/catalog");
+    draft.pages ??= [];
+    draft.pageButtons ??= [];
     if (!container.isConnected) return;
     let activeTab = lastTab;
     const edited = new Set();
     let lastCodes = null;
+    let pageToEdit = "shop";
+    let photosReading = 0;
+    const stagedPhotos = new Map();
     const bar = node("div", {class: "chips", "aria-label": "بخش‌های مدیریت"});
     const body = node("div");
     const shell = node("div", {class: "studio"});
     const preview = node("aside", {class: "studio-preview stack", "aria-label": "پیش‌نمایش طرح"});
+
+    const pendingPreview = path => stagedPhotos.get(path)?.preview;
+    const previewPicture = (path, style, alt, lazy) => picture(path, style, alt, lazy, pendingPreview(path));
+    function imageEditor(title, value, change, maxEdge, kind) {
+      return photoField({title, value, maxEdge, kind, pendingPreview,
+        change(path) {
+          change(path);
+          const referenced = new Set(catalogMedia(draft));
+          for (const key of stagedPhotos.keys()) if (!referenced.has(key)) stagedPhotos.delete(key);
+        },
+        stage(photo) {
+          stagedPhotos.set(photo.path, photo);
+        },
+        busy(delta) {
+          photosReading += delta;
+          save.disabled = photosReading > 0;
+        },
+      });
+    }
 
     function drawPreview() {
       const {settings, products} = draft;
@@ -68,12 +95,12 @@ export async function showStudio({screen, api, demo, training, notify, updateCat
         ),
         node("div", {class: "brand"},
           node("span", {class: "brand-mark"}, safeUrl(settings.logo, true) ?
-            picture(settings.logo, "brand-logo", "", false) : settings.name.slice(0, 2)),
+            previewPicture(settings.logo, "brand-logo", "", false) : settings.name.slice(0, 2)),
           node("strong", {class: "brand-name"}, settings.name),
         ),
         settings.welcome && node("p", {class: "muted"}, settings.welcome),
         (settings.bannerTitle || settings.bannerText || settings.bannerImage) && node("div", {class: "hero"},
-          safeUrl(settings.bannerImage, true) && picture(settings.bannerImage, "hero-picture", "", false),
+          safeUrl(settings.bannerImage, true) && previewPicture(settings.bannerImage, "hero-picture", "", false),
           node("div", {class: "hero-copy stack compact"},
             node("h2", {}, settings.bannerTitle),
             node("small", {}, settings.bannerText),
@@ -85,7 +112,7 @@ export async function showStudio({screen, api, demo, training, notify, updateCat
         ),
         node("div", {class: "cards"},
           products.filter(product => product.active).slice(0, 4).map(product => node("article", {class: "product"},
-            picture(product.image, "product-picture"),
+            previewPicture(product.image, "product-picture"),
             node("div", {class: "product-copy"},
               node("strong", {class: "product-name"}, product.name),
               node("small", {class: "price"}, product.variants[0] ? price(product.variants[0].price) : "مشاهدهٔ راهنما"),
@@ -100,16 +127,24 @@ export async function showStudio({screen, api, demo, training, notify, updateCat
 
     async function saveDraft() {
       save.disabled = true;
+      toolbar.inert = bar.inert = body.inert = true;
       save.textContent = "در حال ذخیره…";
       try {
-        draft = await api("/api/admin/catalog", {method: "PUT", body: cleanCatalog(draft)});
+        const catalog = cleanCatalog(draft);
+        for (const path of catalogMedia(catalog)) {
+          const photo = stagedPhotos.get(path);
+          if (photo) await api(path.replace("/api/", "/api/admin/"), {method: "PUT", body: photo.blob});
+        }
+        draft = await api("/api/admin/catalog", {method: "PUT", body: catalog});
+        stagedPhotos.clear();
         await updateCatalog();
         notify("تنظیمات فروشگاه ذخیره شد.");
         rerender();
       } catch (error) {
         notify(error.message);
       } finally {
-        save.disabled = false;
+        toolbar.inert = bar.inert = body.inert = false;
+        save.disabled = photosReading > 0;
         save.textContent = "ذخیرهٔ تنظیمات";
       }
     }
@@ -128,7 +163,7 @@ export async function showStudio({screen, api, demo, training, notify, updateCat
         section("هویت فروشگاه", node("div", {class: "form-grid"},
           formInput("نام فروشگاه", settings.name, set("name"), {maxlength: 64}, "wide"),
           textarea("پیام خوش‌آمد", settings.welcome, set("welcome"), "wide", 500),
-          formInput("آدرس HTTPS لوگو", settings.logo, set("logo"), {dir: "ltr", inputmode: "url"}, "wide"),
+          imageEditor("لوگوی فروشگاه", settings.logo, set("logo"), 512, "logo-sample"),
           formInput("لینک HTTPS پشتیبانی", settings.supportUrl, set("supportUrl"), {dir: "ltr", inputmode: "url"}, "wide"),
           formInput("لینک HTTPS شرایط خرید", settings.termsUrl, set("termsUrl"), {dir: "ltr", inputmode: "url"}, "wide"),
           !demo && connectPayments(),
@@ -136,7 +171,7 @@ export async function showStudio({screen, api, demo, training, notify, updateCat
         section("بنر", node("div", {class: "form-grid"},
           formInput("عنوان بنر", settings.bannerTitle, set("bannerTitle"), {maxlength: 80}, "wide"),
           textarea("متن بنر", settings.bannerText, set("bannerText"), "wide", 180),
-          formInput("آدرس عکس بنر", settings.bannerImage, set("bannerImage"), {dir: "ltr", inputmode: "url"}, "wide"),
+          imageEditor("عکس بنر", settings.bannerImage, set("bannerImage"), 1500, "banner-sample"),
           field("محصول دکمهٔ بنر", select([["", "بدون دکمه"], ...draft.products.filter(product => product.active)
             .map(product => [product.id, product.name])], settings.bannerProductId ?? "", {
               onchange: event => set("bannerProductId")(event.target.value),
@@ -277,7 +312,7 @@ export async function showStudio({screen, api, demo, training, notify, updateCat
               onchange: event => { product.delivery = event.target.value; drawBody(); },
             })),
             textarea("توضیح محصول", product.description, set("description"), "wide", 1500),
-            formInput("آدرس عکس محصول", product.image, set("image"), {dir: "ltr", inputmode: "url"}, "wide"),
+            imageEditor("عکس کارت محصول", product.image, set("image"), 1200, "product-sample"),
             check("نمایش در فروشگاه", product.active, set("active")),
             product.delivery !== "link" && check("فعال برای پرداخت واقعی", product.liveEnabled, set("liveEnabled")),
           ),
@@ -301,6 +336,7 @@ export async function showStudio({screen, api, demo, training, notify, updateCat
             button("حذف محصول", () => {
               if (!window.confirm("محصول از کاتالوگ حذف شود؟")) return;
               draft.products = draft.products.filter(entry => entry.id !== product.id);
+              removePageButtons("product:" + product.id);
               if (draft.settings.bannerProductId === product.id) draft.settings.bannerProductId = "";
               drawBody();
             }, "danger ghost"),
@@ -335,6 +371,61 @@ export async function showStudio({screen, api, demo, training, notify, updateCat
             drawBody();
             body.querySelector("details[open] input")?.focus();
           }, "primary")),
+      );
+    }
+
+    function removePageButtons(key) {
+      draft.pageButtons = draft.pageButtons.filter(option => option.page !== key && option.target !== key);
+      if (pageToEdit === key) pageToEdit = "shop";
+    }
+
+    function drawPages() {
+      const choices = pageChoices(draft.pages, draft.products);
+      const customPage = draft.pages.find(page => "page:" + page.id === pageToEdit);
+      const options = draft.pageButtons.filter(option => option.page === pageToEdit);
+      const destinations = [...choices.filter(([key]) => key !== "detail"), ["external", "لینک بیرونی"]];
+      return section("صفحه‌ها و گزینه‌ها",
+        field("صفحه‌ای که ویرایش می‌کنی", select(choices, pageToEdit, {
+          onchange: event => { pageToEdit = event.target.value; drawBody(); },
+        })),
+        button("افزودن صفحه", () => {
+          const page = {id: id(), title: "", text: ""};
+          draft.pages.push(page);
+          pageToEdit = "page:" + page.id;
+          drawBody();
+          body.querySelector("input")?.focus();
+        }, "subtle", {disabled: draft.pages.length >= maxPages}),
+        customPage && node("div", {class: "stack compact"},
+          formInput("عنوان صفحه", customPage.title, value => { customPage.title = value; }, {maxlength: 70}),
+          textarea("متن صفحه", customPage.text, value => { customPage.text = value; }, "", 2500),
+          button("حذف صفحه", () => {
+            if (!window.confirm("صفحه و گزینه‌های مرتبط با آن حذف شود؟")) return;
+            draft.pages = draft.pages.filter(page => page !== customPage);
+            removePageButtons(pageToEdit);
+            drawBody();
+          }, "ghost danger"),
+        ),
+        options.map((option, index) => {
+          const internal = destinations.some(([target]) => target === option.target && target !== "external");
+          return node("fieldset", {class: "panel stack compact"},
+            node("legend", {}, "گزینه ", fmt(index + 1)),
+            formInput("متن دکمه", option.label, value => { option.label = value; }, {maxlength: 42}),
+            field("مقصد دکمه", select(destinations, internal ? option.target : "external", {
+              onchange: event => { option.target = event.target.value === "external" ? "" : event.target.value; drawBody(); },
+            })),
+            !internal && formInput("آدرس صفحه", option.target, value => { option.target = value; },
+              {type: "url", dir: "ltr", maxlength: 640, placeholder: "https://"}),
+            button("حذف گزینه", () => {
+              draft.pageButtons = draft.pageButtons.filter(entry => entry !== option);
+              drawBody();
+            }, "ghost danger"),
+          );
+        }),
+        button("افزودن گزینه به این صفحه", () => {
+          draft.pageButtons.push({page: pageToEdit, label: "", target: "shop"});
+          drawBody();
+          [...body.querySelectorAll("fieldset input")].at(-1)?.focus();
+        }, "primary", {disabled: options.length >= maxButtonsPerPage || draft.pageButtons.length >= maxPageButtons}),
       );
     }
 
@@ -439,6 +530,7 @@ export async function showStudio({screen, api, demo, training, notify, updateCat
       body.hidden = activeTab === "preview";
       if (activeTab === "appearance") body.replaceChildren(drawAppearance());
       if (activeTab === "catalog") body.replaceChildren(drawCatalog());
+      if (activeTab === "pages") body.replaceChildren(drawPages());
       if (activeTab === "orders") {
         const orders = node("div", {class: "stack"}, node("p", {class: "loading"}, "در حال دریافت سفارش‌ها…"));
         body.replaceChildren(orders);
@@ -454,6 +546,7 @@ export async function showStudio({screen, api, demo, training, notify, updateCat
       try {
         if (file.size > 1000000) throw new Error("اندازهٔ فایل تنظیمات بیشتر از یک مگابایت است.");
         draft = cleanCatalog(JSON.parse(await file.text()));
+        pageToEdit = "shop";
         drawBody();
         notify("تنظیمات وارد شد. برای اعمال، ذخیره را بزنید.");
       } catch (error) {

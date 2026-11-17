@@ -1,3 +1,5 @@
+import {cleanPages} from "./pages.js";
+import {catalogMedia, mediaPath} from "./media.js";
 import {defaultCatalog as defaults} from "./default-catalog.js";
 
 export {defaults};
@@ -35,13 +37,17 @@ function trim(value, limit = 240) {
 
 export function safeUrl(value, local = false) {
   if (typeof value !== "string") return "";
-  if (local && /^\/assets\/[A-Za-z0-9_.-]+$/.test(value)) return value;
+  if (local && (/^\/assets\/[A-Za-z0-9_.-]+$/.test(value) || mediaPath.test(value))) return value;
   try {
     const url = new URL(value);
     return url.protocol === "https:" && !url.username && !url.password ? url.href : "";
   } catch {
     return "";
   }
+}
+
+export function imageUrl(value) {
+  return shopState.images?.[value] ?? safeUrl(value, true);
 }
 
 function color(value, fallback) {
@@ -137,7 +143,7 @@ export function cleanCatalog(source) {
       throw new Error(`گزینه‌های فیلد انتخابی «${product.name}» را مشخص کنید.`);
     }
   }
-  return {settings, categories, products};
+  return {settings, categories, products, ...cleanPages(source, products, safeUrl)};
 }
 
 function saveDemo() {
@@ -192,6 +198,7 @@ function sampleOrder(body) {
 }
 
 export function createDemoApi() {
+  const pendingImages = new Map();
   return async function demoApi(path, {method = "GET", body} = {}) {
     if (path === "/api/me") {
       return {owner: true, profile: {id: "demo-owner", first_name: "کارآموز"}, mode: "training"};
@@ -199,10 +206,24 @@ export function createDemoApi() {
     if (path === "/api/catalog") {
       return structuredClone({...shopState.catalog, products: shopState.catalog.products.filter(product => product.active)});
     }
+    const imagePath = path.replace("/api/admin/", "/api/");
+    if (method === "PUT" && path.startsWith("/api/admin/media/") && mediaPath.test(imagePath)) {
+      const bytes = new Uint8Array(await body.arrayBuffer());
+      pendingImages.set(imagePath, "data:" + body.type + ";base64," +
+        btoa(Array.from(bytes, byte => String.fromCharCode(byte)).join("")));
+      return {ok: true};
+    }
     if (path === "/api/admin/catalog") {
       if (method === "PUT") {
-        shopState.catalog = cleanCatalog(body);
-        saveDemo();
+        const catalog = cleanCatalog(body);
+        const images = {};
+        for (const path of catalogMedia(catalog)) {
+          images[path] = pendingImages.get(path) ?? shopState.images?.[path];
+          if (!images[path]) throw new Error("تصویر در این مرورگر موجود نیست. دوباره آن را انتخاب کن.");
+        }
+        writeStorage(STORAGE_KEY, {...shopState, catalog, images});
+        Object.assign(shopState, {catalog, images});
+        pendingImages.clear();
       }
       return structuredClone(shopState.catalog);
     }
@@ -264,8 +285,10 @@ export function createRemoteApi(telegram) {
   return async function callApi(path, {method = "GET", body} = {}) {
     const headers = {Accept: "application/json"};
     if (telegram?.initData) headers.Authorization = `tma ${telegram.initData}`;
-    if (body !== undefined) headers["Content-Type"] = "application/json";
-    const response = await fetch(path, {method, headers, body: body === undefined ? undefined : JSON.stringify(body), cache: "no-store"});
+    const binary = body instanceof Blob;
+    if (body !== undefined) headers["Content-Type"] = binary ? body.type : "application/json";
+    const payload = binary || body === undefined ? body : JSON.stringify(body);
+    const response = await fetch(path, {method, headers, body: payload, cache: "no-store"});
     const data = await response.json().catch(() => null);
     if (!response.ok || !data) {
       const error = new Error(data?.error || "ارتباط با فروشگاه برقرار نشد. دوباره امتحان کنید.");
